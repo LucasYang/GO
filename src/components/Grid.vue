@@ -15,20 +15,39 @@
       :style="'bottom:'+(index*5.55555555)+'%' "
     >
       <span
+        class="board-point"
+        @click="gridPointClickHandler(ver_label+hor_label)"
         v-for="(ver_label, index) in vertical_labels"
         :key="hor_label+ver_label"
-        :style="'left: calc(' + (index*5.55555555)+'%' + ' - 2px)' "
-        :class="{'board-point': pointed_grid.includes(ver_label+hor_label) }"
-      ></span>
+        :style="'left: calc(' + (index*5.55555555)+'%' + ' - 4px)' "
+        :class="{'board-point black': pointed_grid.includes(ver_label+hor_label) }"
+      >
+        <Stone
+          v-if="moves.includes(ver_label+hor_label)"
+          :player="moves.indexOf(ver_label+hor_label)%2 === 0 ? 'white':'black' "
+        ></Stone>
+      </span>
     </span>
   </div>
 </template>
 
 <script>
+import Stone from "./Stone";
+
 export default {
   name: "Grid",
+  components: {
+    Stone
+  },
   props: {
     msg: String
+  },
+  methods: {
+    gridPointClickHandler: function(position) {
+      let newMoves = [...this.moves].concat(position);
+      this.moves = newMoves;
+      console.log(this.moves);
+    }
   },
   data: () => {
     return {
@@ -74,7 +93,20 @@ export default {
         "S",
         "T"
       ],
-      pointed_grid: ["D4", "D10", "D16", "J4", "J10", "J16", "P4", "P10", "P16"]
+      // the grids that are bulleted
+      pointed_grid: [
+        "D4",
+        "D10",
+        "D16",
+        "K4",
+        "K10",
+        "K16",
+        "Q4",
+        "Q10",
+        "Q16"
+      ],
+      // the moves positioned on the board
+      moves: []
     };
   }
 };
@@ -120,9 +152,19 @@ export default {
 }
 
 .board-point {
-  width: 5px;
-  height: 5px;
-  background: #000000;
+  width: 9px;
+  height: 9px;
   position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-point:hover {
+  background: #ffffff;
+}
+
+.black {
+  background: #000000;
 }
 </style>
