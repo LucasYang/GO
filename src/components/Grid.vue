@@ -24,8 +24,9 @@
       >
         {{ver_label+hor_label}}
         <Stone
-          v-if="gridWithinMoves(ver_label+hor_label)"
+          v-if="showStone(ver_label+hor_label)"
           :player="determinePlayerType(ver_label+hor_label)"
+          :takenOut="surroundingGrids(ver_label+hor_label).takenOut"
         ></Stone>
       </span>
     </span>
@@ -50,46 +51,58 @@ export default {
       }
       let moveInfo = {
         position,
-        step: this.moves.length + 1,
-        connections: this.checkStoneConnection(position),
-        chi: this.countChi(position)
+        step: this.moves.length,
+        connected_stones: this.surroundingGrids(position).friendlyStones,
+        chi: this.surroundingGrids(position).chi,
+        takenOut: false
       };
+      // concat the moves in data
+      let newMoves = [...this.moves].concat(moveInfo);
+      this.moves = newMoves;
+      this.updateSurroundingStoneInfo(position);
+    },
+    updateSurroundingStoneInfo: function(position) {
+      console.log(position);
       // the stones that surround the current grid point
       let surroundingStones = this.surroundingGrids(position).takenByStone;
       let surStonesPos = surroundingStones.map(({ position }) => position);
+      // the opponent's stones around my clicked position
+      let current_player = this.determinePlayerType(position);
+      let opposingStones = this.surroundingGrids(position).opposingStones;
+      let friendlyStones = this.surroundingGrids(position).friendlyStones;
+      console.log("opposingStones:", opposingStones);
+      console.log("friendlyStones:", friendlyStones);
 
-      let newMoves = [...this.moves].concat(moveInfo);
-      // update the surrounding stone's chi
-      newMoves.forEach(move => {
+      // update chi and and connected_stones
+      this.moves.forEach(move => {
+        move.connected_stones = this.surroundingGrids(
+          move.position
+        ).friendlyStones;
         if (surStonesPos.includes(move.position)) {
           move.chi--;
-          return move;
         }
+        return move;
       });
-      this.moves = newMoves;
+      console.log(this.moves);
     },
-    gridWithinMoves: function(gridPoint) {
+    // display stone on the gridpoint
+    showStone: function(gridPoint) {
       return this.moves.find(({ position }) => {
         if (position === gridPoint) {
           return true;
         } else return false;
       });
     },
+    // black player is even, white is odd
     determinePlayerType: function(gridPoint) {
       let play_index = this.moves.findIndex(({ position }, index) => {
         return position === gridPoint;
       });
       return play_index % 2 === 0 ? "black" : "white";
     },
-    checkStoneConnection: function(position) {
-      console.log(position);
-    },
-    countChi: function(position) {
-      let chi = this.surroundingGrids(position).chi;
-      return chi;
-    },
     // return an array of surrounding grids of a position
     surroundingGrids(position) {
+      let current_player = this.determinePlayerType(position);
       let hor_point = position[0];
       let ver_point = parseInt(position.slice(1));
       let hor_point_index = this.horizontal_labels.indexOf(hor_point);
@@ -117,18 +130,47 @@ export default {
         point_bottom,
         point_right
       ];
-      // filter out undefined and NaN
+      // filter out undefined and NaN for border/edge cases
       let filteredSurroundingPoints = surrounding_points.filter(ele => {
         return !ele.includes("NaN") && !ele.includes("undefined");
       });
+
       // check if the surrounding grids has been taken by stones
       let pointsTaken = this.moves.filter(({ position }) => {
         return filteredSurroundingPoints.includes(position);
       });
+      // only count opposing stones
+      let opposingStones = pointsTaken.filter(({ step }) => {
+        switch (current_player) {
+          case "white":
+            // return black stones
+            return step % 2 === 0;
+          case "black":
+            // return white stones
+            return step % 2 === 1;
+        }
+      });
+
+      let friendlyStones = pointsTaken.filter(({ step }) => {
+        switch (current_player) {
+          case "black":
+            // return black stones
+            return step % 2 === 0;
+          case "white":
+            // return white stones
+            return step % 2 === 1;
+        }
+      });
+
       // total chi - taken chi
       return {
-        chi: filteredSurroundingPoints.length - pointsTaken.length,
-        takenByStone: pointsTaken
+        opposingStones,
+        chi:
+          filteredSurroundingPoints.length -
+          opposingStones.length -
+          friendlyStones.length,
+        takenByStone: pointsTaken,
+        friendlyStones: friendlyStones
       };
     }
   },

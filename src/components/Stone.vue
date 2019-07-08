@@ -1,12 +1,17 @@
 <template>
-  <div id="stone" :class="player === 'white' ? 'white-player': 'black-player' "></div>
+  <div
+    id="stone"
+    :class="player === 'white' ? 'white-player': 'black-player' "
+    :style="takenOut ? 'display: none;': null"
+  ></div>
 </template>
 
 <script>
 export default {
   name: "Stone",
   props: {
-    player: String
+    player: String,
+    takenOut: Number
   }
 };
 </script>
