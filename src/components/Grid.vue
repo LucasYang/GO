@@ -26,7 +26,6 @@
         <Stone
           v-if="showStone(ver_label+hor_label)"
           :player="determinePlayerType(ver_label+hor_label)"
-          :takenOut="surroundingGrids(ver_label+hor_label).takenOut"
         ></Stone>
       </span>
     </span>
@@ -52,7 +51,7 @@ export default {
       let moveInfo = {
         position,
         step: this.moves.length,
-        connected_stones: this.surroundingGrids(position).friendlyStones,
+        connectedStones: this.surroundingGrids(position).friendlyStones,
         chi: this.surroundingGrids(position).chi,
         takenOut: false
       };
@@ -66,16 +65,9 @@ export default {
       // the stones that surround the current grid point
       let surroundingStones = this.surroundingGrids(position).takenByStone;
       let surStonesPos = surroundingStones.map(({ position }) => position);
-      // the opponent's stones around my clicked position
-      let current_player = this.determinePlayerType(position);
-      let opposingStones = this.surroundingGrids(position).opposingStones;
-      let friendlyStones = this.surroundingGrids(position).friendlyStones;
-      console.log("opposingStones:", opposingStones);
-      console.log("friendlyStones:", friendlyStones);
-
-      // update chi and and connected_stones
+      // update chi and and connectedStones
       this.moves.forEach(move => {
-        move.connected_stones = this.surroundingGrids(
+        move.connectedStones = this.surroundingGrids(
           move.position
         ).friendlyStones;
         if (surStonesPos.includes(move.position)) {
@@ -83,12 +75,60 @@ export default {
         }
         return move;
       });
-      console.log(this.moves);
+      // the opponent's stones around my clicked position
+      let current_player = this.determinePlayerType(position);
+      let opposingStones = this.surroundingGrids(position).opposingStones;
+      let friendlyStones = this.surroundingGrids(position).friendlyStones;
+      let opposingStones_EmptyChi = opposingStones.filter(
+        ({ chi }) => chi === 0
+      );
+      if (opposingStones_EmptyChi.length) {
+        console.log(opposingStones_EmptyChi);
+        opposingStones_EmptyChi.forEach(stone => {
+          // when stone isn't connected with other friendly stones
+          if (!stone.connectedStones.length) {
+            this.removeStones([stone]);
+          } else {
+            // get the array of the pieces that are connected
+            let stones = this.uniqueConnections(stone);
+            let chiArr = stones.map(e => e.chi);
+            let totalChi = chiArr.reduce((sum, currVal) => sum + currVal);
+            if (totalChi === 0) {
+              this.removeStones(stones);
+            }
+          }
+        });
+      }
+    },
+    uniqueConnections: function(stone) {
+      let queue = [stone];
+      // find the distinctive set of arrays
+      for (let i = 0; i < queue.length; i++) {
+        // the connecting stones to queue[i]
+        let connections = queue[i].connectedStones;
+        for (let j = 0; j < connections.length; j++) {
+          let posArr = queue.map(e => e.position);
+          if (!posArr.includes(connections[j].position)) {
+            // store the stones that aren't already in queue
+            queue.push(connections[j]);
+          }
+        }
+      }
+      return queue;
+    },
+    removeStones: function(stoneArr) {
+      let stepArr = stoneArr.map(({ step }) => step);
+      this.moves.forEach(move => {
+        if (stepArr.includes(move.step)) {
+          move.takenOut = true;
+        }
+        return move;
+      });
     },
     // display stone on the gridpoint
     showStone: function(gridPoint) {
-      return this.moves.find(({ position }) => {
-        if (position === gridPoint) {
+      return this.moves.find(({ position, takenOut }) => {
+        if (position === gridPoint && !takenOut) {
           return true;
         } else return false;
       });
