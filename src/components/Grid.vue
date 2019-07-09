@@ -70,7 +70,7 @@ export default {
         move.connectedStones = this.surroundingGrids(
           move.position
         ).friendlyStones;
-        if (surStonesPos.includes(move.position)) {
+        if (surStonesPos.includes(move.position) && move.takenOut === false) {
           move.chi--;
         }
         return move;
@@ -79,8 +79,9 @@ export default {
       let current_player = this.determinePlayerType(position);
       let opposingStones = this.surroundingGrids(position).opposingStones;
       let friendlyStones = this.surroundingGrids(position).friendlyStones;
+
       let opposingStones_EmptyChi = opposingStones.filter(
-        ({ chi }) => chi === 0
+        ({ chi, takenOut }) => chi === 0 && takenOut === false
       );
       if (opposingStones_EmptyChi.length) {
         console.log(opposingStones_EmptyChi);
@@ -100,6 +101,7 @@ export default {
         });
       }
     },
+    // to do: recover chi when removing stones
     uniqueConnections: function(stone) {
       let queue = [stone];
       // find the distinctive set of arrays
@@ -176,8 +178,10 @@ export default {
       });
 
       // check if the surrounding grids has been taken by stones
-      let pointsTaken = this.moves.filter(({ position }) => {
-        return filteredSurroundingPoints.includes(position);
+      let pointsTaken = this.moves.filter(({ position, takenOut }) => {
+        return (
+          filteredSurroundingPoints.includes(position) && takenOut === false
+        );
       });
       // only count opposing stones
       let opposingStones = pointsTaken.filter(({ step }) => {
@@ -205,12 +209,12 @@ export default {
       // total chi - taken chi
       return {
         opposingStones,
+        friendlyStones: friendlyStones,
+        takenByStone: pointsTaken,
         chi:
           filteredSurroundingPoints.length -
           opposingStones.length -
-          friendlyStones.length,
-        takenByStone: pointsTaken,
-        friendlyStones: friendlyStones
+          friendlyStones.length
       };
     }
   },
