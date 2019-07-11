@@ -51,8 +51,8 @@ export default {
       let moveInfo = {
         position,
         step: this.moves.length,
-        connectedStones: this.surroundingGrids(position).friendlyStones,
-        chi: this.surroundingGrids(position).chi,
+        connectedStones: this.measurePoint(position).friendlyStones,
+        chi: this.measurePoint(position).chi,
         takenOut: false
       };
       // concat the moves in data
@@ -61,30 +61,26 @@ export default {
       this.updateSurroundingStoneInfo(position);
     },
     updateSurroundingStoneInfo: function(position) {
-      console.log(position);
       // the stones that surround the current grid point
-      let surroundingStones = this.surroundingGrids(position).takenByStone;
+      let surroundingStones = this.measurePoint(position).takenByStone;
       let surStonesPos = surroundingStones.map(({ position }) => position);
       // update chi and and connectedStones
       this.moves.forEach(move => {
-        move.connectedStones = this.surroundingGrids(
-          move.position
-        ).friendlyStones;
+        move.connectedStones = this.measurePoint(move.position).friendlyStones;
         if (surStonesPos.includes(move.position) && move.takenOut === false) {
           move.chi--;
         }
         return move;
       });
       // the opponent's stones around my clicked position
-      let current_player = this.determinePlayerType(position);
-      let opposingStones = this.surroundingGrids(position).opposingStones;
-      let friendlyStones = this.surroundingGrids(position).friendlyStones;
-
+      let opposingStones = this.measurePoint(position).opposingStones;
+      // let friendlyStones = this.measurePoint(position).friendlyStones;
+      console.log(opposingStones);
       let opposingStones_EmptyChi = opposingStones.filter(
         ({ chi, takenOut }) => chi === 0 && takenOut === false
       );
+      console.log(opposingStones_EmptyChi);
       if (opposingStones_EmptyChi.length) {
-        console.log(opposingStones_EmptyChi);
         opposingStones_EmptyChi.forEach(stone => {
           // when stone isn't connected with other friendly stones
           if (!stone.connectedStones.length) {
@@ -101,7 +97,6 @@ export default {
         });
       }
     },
-    // to do: recover chi when removing stones
     uniqueConnections: function(stone) {
       let queue = [stone];
       // find the distinctive set of arrays
@@ -118,18 +113,33 @@ export default {
       }
       return queue;
     },
+    // to do: recover chi when removing stones
     removeStones: function(stoneArr) {
       let stepArr = stoneArr.map(({ step }) => step);
-      this.moves.forEach(move => {
+      // set the moves to be takenOut
+      this.nonTakenOutMoves.forEach(move => {
         if (stepArr.includes(move.step)) {
           move.takenOut = true;
+        }
+        return move;
+      });
+      let surroundingStones = this.measureGroup(stoneArr).surroundingStones;
+      this.recoverChi(surroundingStones);
+    },
+    // recover chi to opponent stones
+    recoverChi: function(stoneArr) {
+      let stepArr = stoneArr.map(({ step }) => step);
+      // set the moves to be takenOut
+      this.nonTakenOutMoves.forEach(move => {
+        if (stepArr.includes(move.step)) {
+          move.chi++;
         }
         return move;
       });
     },
     // display stone on the gridpoint
     showStone: function(gridPoint) {
-      return this.moves.find(({ position, takenOut }) => {
+      return this.nonTakenOutMoves.find(({ position, takenOut }) => {
         if (position === gridPoint && !takenOut) {
           return true;
         } else return false;
@@ -137,13 +147,14 @@ export default {
     },
     // black player is even, white is odd
     determinePlayerType: function(gridPoint) {
-      let play_index = this.moves.findIndex(({ position }, index) => {
-        return position === gridPoint;
+      let play_index = this.moves.findIndex(({ position, takenOut }, index) => {
+        return position === gridPoint && takenOut === false;
       });
       return play_index % 2 === 0 ? "black" : "white";
     },
-    // return an array of surrounding grids of a position
-    surroundingGrids(position) {
+
+    // return info about the current position
+    measurePoint(position) {
       let current_player = this.determinePlayerType(position);
       let hor_point = position[0];
       let ver_point = parseInt(position.slice(1));
@@ -216,6 +227,20 @@ export default {
           opposingStones.length -
           friendlyStones.length
       };
+    },
+    // return info about the current array of positions
+    measureGroup(arr) {
+      // recover chi from taking out stone
+      let surroundingStones = arr
+        .map(({ position }) => {
+          // opponent stones
+          let opponentStones = this.measurePoint(position).opposingStones;
+          return opponentStones;
+        })
+        .flat();
+      return {
+        surroundingStones
+      };
     }
   },
   data: () => {
@@ -284,6 +309,9 @@ export default {
     },
     white_moves() {
       return this.moves.filter((ele, index) => index % 2 === 1);
+    },
+    nonTakenOutMoves() {
+      return this.moves.filter(ele => ele.takenOut === false);
     }
   }
 };
