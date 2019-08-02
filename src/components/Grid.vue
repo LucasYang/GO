@@ -22,7 +22,7 @@
         :style="'left: calc(' + (index*5.55555555)+'%' + ' - 4px)' "
         :class="{'board-point black': pointed_grid.includes(ver_label+hor_label) }"
       >
-        {{ver_label+hor_label}}
+        <!-- {{ver_label+hor_label}} -->
         <Stone
           v-if="showStone(ver_label+hor_label)"
           :player="determinePlayerType(ver_label+hor_label)"
@@ -364,6 +364,7 @@ export default {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  user-select: none;
 }
 
 .board-point:hover {
